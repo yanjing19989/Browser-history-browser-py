@@ -1,0 +1,13 @@
+{
+  "name": "bhb-python-backend",
+  "version": "1.0.0",
+  "description": "Browser History Browser - Python Backend",
+  "scripts": {
+    "start": "cd backend && python main.py",
+    "dev": "cd backend && python main.py",
+    "install-backend": "cd backend && pip install -r requirements.txt"
+  },
+  "keywords": ["browser", "history", "visualization", "python", "fastapi"],
+  "author": "BHB Team",
+  "license": "MIT"
+}

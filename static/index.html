@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>浏览历史可视化</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <script src="theme-init.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="app-header">
+    <h1>浏览历史可视化</h1>
+    <div class="header-actions">
+      <div class="search-bar">
+        <button id="filterToggleBtn" class="btn btn-secondary filter-toggle-btn" title="显示/隐藏过滤">☰</button>
+        <input id="searchInput" type="text" placeholder="搜索标题或URL... (Ctrl+K)" />
+        <button id="searchBtn" class="btn btn-secondary">搜索</button>
+      </div>
+      <div class="theme-switcher">
+        <button id="themeBtn" class="btn btn-secondary" title="切换主题">🌓 自动</button>
+      </div>
+      <button id="settingsBtn" class="btn btn-secondary" title="设置">⚙️</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="filters">
+      <h2>过滤</h2>
+      <label>时间范围:
+        <select id="timeRange">
+          <option value="7d">过去7天</option>
+          <option value="30d">过去30天</option>
+          <option value="90d">过去90天</option>
+          <option value="custom">自定义范围</option>
+          <option value="all">全部</option>
+        </select>
+      </label>
+      <div id="customDateRange" class="date-range" style="display: none;">
+        <label>开始日期:
+          <input type="date" id="startDate" />
+        </label>
+        <label>结束日期:
+          <input type="date" id="endDate" />
+        </label>
+      </div>
+      <label>Locale:
+        <input id="localeFilter" placeholder="en-us" />
+      </label>
+      <button id="applyFilters">应用过滤</button>
+    </aside>
+    <section class="content">
+      <section class="kpis" id="kpis">
+        <!-- 统一KPI大卡片 -->
+      </section>
+      <section class="history-list">
+        <h2>历史记录</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>
+                <span class="sortable-header" data-sort="title">
+                  标题 <span class="sort-indicator" id="sort-title"></span>
+                </span>
+              </th>
+              <th>URL</th>
+              <th>
+                <span class="sortable-header" data-sort="last_visited_time">
+                  最后访问 <span class="sort-indicator" id="sort-last_visited_time">🔽</span>
+                </span>
+              </th>
+              <th>
+                <span class="sortable-header" data-sort="num_visits">
+                  次数 <span class="sort-indicator" id="sort-num_visits"></span>
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="historyTBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button id="prevPage">上一页</button>
+          <div class="page-nav">
+            <span>第</span>
+            <input type="number" id="pageInput" min="1" />
+            <span>页，共</span>
+            <span id="totalPages">1</span>
+            <span>页</span>
+          </div>
+          <button id="nextPage">下一页</button>
+        </div>
+      </section>
+    </section>
+    <aside class="details" id="detailsPanel">
+      <div class="details-header">
+        <h2>详情</h2>
+        <button id="detailsCloseBtn" class="btn btn-secondary" title="隐藏详情">✕</button>
+      </div>
+      <div id="detailContent">选择一条记录查看...</div>
+      <div class="detail-actions" id="detailActions" style="display: none;">
+        <button id="copyTitleBtn" class="detail-btn" title="复制标题">📋 复制标题</button>
+        <button id="copyUrlBtn" class="detail-btn" title="复制链接">🔗 复制链接</button>
+        <button id="openUrlBtn" class="detail-btn" title="打开链接">🌐 打开链接</button>
+      </div>
+    </aside>
+  </main>
+  <script src="theme.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
