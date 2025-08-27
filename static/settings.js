@@ -16,7 +16,10 @@ const elements = {
   browserDbPath: document.getElementById('browserDbPath'),
   browseBrowserBtn: document.getElementById('browseBrowserBtn'),
   syncBtn: document.getElementById('syncBtn'),
-  syncStatus: document.getElementById('syncStatus')
+  syncStatus: document.getElementById('syncStatus'),
+  // TOP站点数量配置相关元素
+  topSitesCount: document.getElementById('topSitesCount'),
+  applyTopSitesBtn: document.getElementById('applyTopSitesBtn')
 };
 
 let currentConfig = null;
@@ -84,13 +87,19 @@ async function loadConfig() {
       updateSyncStatus('ok', '已保存浏览器数据库路径');
     }
 
-    updateButtons();
-    updateSyncButtons();
+    // 加载TOP站点数量配置
+    if (currentConfig.top_sites_count) {
+      elements.topSitesCount.value = currentConfig.top_sites_count;
+    } else {
+      elements.topSitesCount.value = 6; // 默认值
+    }
   } catch (error) {
     console.error('加载配置失败:', error);
-    updateStatus('error', '配置加载失败');
-    showToast('配置加载失败', 'error');
+    updateStatus('error', '配置加载失败，请检查/删除配置文件：%APPDATA%/BrowserHistoryBrowser/config.json');
   }
+  updateButtons();
+  updateSyncButtons();
+  updateTopSitesButtons();
 }
 
 // 浏览文件 - 调用后端API打开文件选择对话框
@@ -127,7 +136,7 @@ async function validatePath() {
     const response = await fetch(`${API_BASE}/validate_db_path`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path })
+      body: JSON.stringify({ db_path: path })
     });
 
     if (!response.ok) {
@@ -211,6 +220,10 @@ elements.browseBrowserBtn.addEventListener('click', browseBrowserFile);
 elements.syncBtn.addEventListener('click', syncBrowserDb);
 elements.browserDbPath.addEventListener('input', updateSyncButtons);
 
+// TOP站点数量配置事件监听
+elements.topSitesCount.addEventListener('input', updateTopSitesButtons);
+elements.applyTopSitesBtn.addEventListener('click', applyTopSitesCount);
+
 // 键盘快捷键
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') goBack();
@@ -289,6 +302,22 @@ function updateSyncButtons() {
   elements.syncBtn.disabled = !hasBrowserPath;
 }
 
+// 更新TOP站点数量按钮状态
+function updateTopSitesButtons() {
+  const count = parseInt(elements.topSitesCount.value);
+  const isValid = count >= 1 && count <= 50;
+  const isChanged = currentConfig && count !== currentConfig.top_sites_count;
+
+  elements.applyTopSitesBtn.disabled = !isValid || !isChanged;
+
+  // 添加输入验证的视觉反馈
+  if (count < 1 || count > 50) {
+    elements.topSitesCount.style.borderColor = 'var(--error-color, #dc3545)';
+  } else {
+    elements.topSitesCount.style.borderColor = 'var(--border-glass)';
+  }
+}
+
 // 同步浏览器数据库
 async function syncBrowserDb() {
   const browserPath = elements.browserDbPath.value.trim();
@@ -302,7 +331,7 @@ async function syncBrowserDb() {
     const response = await fetch(`${API_BASE}/copy_browser_db_to_app`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourcePath: browserPath })
+      body: JSON.stringify({ browser_db_path: browserPath })
     });
 
     if (!response.ok) {
@@ -397,6 +426,36 @@ async function cleanupOldDbs() {
   }
 }
 
+// 应用TOP站点数量设置
+async function applyTopSitesCount() {
+  const count = parseInt(elements.topSitesCount.value);
+  try {
+    elements.applyTopSitesBtn.disabled = true;
+
+    const response = await fetch(`${API_BASE}/set_top_sites_count`, {
+      method: 'POST',
+      headers: { 'Content-Type' : 'application/json' },
+      body: JSON.stringify({ top_sites_count: count })
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    showToast(result.message || '设置成功', 'success');
+    // 更新当前配置
+    const configResponse = await fetch(`${API_BASE}/get_config`);
+    if (configResponse.ok) {
+      currentConfig = await configResponse.json();
+    }
+  } catch (error) {
+    console.error('设置TOP站点数量失败:', error);
+    showToast('设置失败: ' + error, 'error');
+  } finally {
+    elements.applyTopSitesBtn.disabled = false;
+  }
+  updateTopSitesButtons();
+}
+
 // 初始化
 loadConfig();
-updateSyncButtons();

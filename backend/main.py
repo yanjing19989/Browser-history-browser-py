@@ -41,7 +41,7 @@ def load_config() -> dict:
                 return json.load(f)
         except Exception:
             pass
-    return {"theme": "auto"}
+    return {}
 
 def save_config(config: dict):
     """保存配置文件"""
@@ -75,12 +75,23 @@ async def stats_overview(timeRange: str = Query("7d")):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取统计数据失败: {str(e)}")
 
-@app.get("/api/get_config")
+@app.get("/api/get_config", response_model=ConfigModel)
 async def get_config():
     """获取配置信息"""
     try:
         config = load_config()
-        return {"db_path": db.db_path, **config}
+        # 优先使用持久化配置中的 top_sites_count，如果不存在则使用服务中的默认值
+        count = config.get("top_sites_count")
+        if count is not None:
+            HistoryService.top_sites_count = count
+
+        # 构造返回的 ConfigModel
+        result = ConfigModel(
+            db_path=config.get("db_path") or getattr(db, 'db_path', None),
+            top_sites_count=HistoryService.top_sites_count,
+            browser_db_path=config.get("browser_db_path")
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取配置失败: {str(e)}")
 
@@ -91,28 +102,28 @@ async def set_db_path(config: ConfigModel):
         if config.db_path:
             # 重新初始化数据库连接
             db.__init__(config.db_path)
-        
+
         # 保存配置
         current_config = load_config()
-        if config.db_path:
+        if config.db_path is not None:
             current_config["db_path"] = config.db_path
         save_config(current_config)
-        
+
         return {"success": True, "message": "数据库路径设置成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"设置数据库路径失败: {str(e)}")
 
 @app.post("/api/validate_db_path")
-async def validate_db_path(path: dict):
+async def validate_db_path(path: ConfigModel):
     """验证数据库路径"""
     try:
-        db_path = path.get("path")
+        db_path = path.db_path
         if not db_path:
             return {"valid": False, "message": "路径不能为空"}
-        
+
         if not os.path.exists(db_path):
             return {"valid": False, "message": "文件不存在"}
-        
+
         # 尝试连接数据库验证
         import sqlite3
         try:
@@ -121,65 +132,45 @@ async def validate_db_path(path: dict):
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='navigation_history'")
             result = cursor.fetchone()
             conn.close()
-            
+
             if result:
                 return {"valid": True, "message": "数据库验证成功"}
             else:
                 return {"valid": False, "message": "不是有效的浏览器历史数据库"}
         except sqlite3.Error:
             return {"valid": False, "message": "无法打开数据库文件"}
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"验证数据库路径失败: {str(e)}")
 
 @app.post("/api/copy_browser_db_to_app")
-async def copy_browser_db_to_app(source: dict):
+async def copy_browser_db_to_app(source: ConfigModel):
     """复制浏览器数据库到应用目录"""
     try:
-        source_path = source.get("sourcePath")
+        source_path = source.browser_db_path
         if not source_path or not os.path.exists(source_path):
             raise HTTPException(status_code=400, detail="源文件不存在")
-        
+
         # 目标路径
         app_data_dir = Path.home() / "AppData" / "Local" / "BHB"
         app_data_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # 生成唯一的文件名
         import time
         timestamp = int(time.time())
         target_path = app_data_dir / f"browser_history_{timestamp}.db"
-        
+
         # 复制文件
         shutil.copy2(source_path, target_path)
 
         current_config = load_config()
-        if source_path:
+        if source_path is not None:
             current_config["browser_db_path"] = source_path
         save_config(current_config)
-        
+
         return {"success": True, "path": str(target_path), "message": "数据库复制成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"复制数据库失败: {str(e)}")
-
-@app.post("/api/set_browser_db_path")
-async def set_browser_db_path(path_data: dict):
-    """设置浏览器数据库为当前数据源"""
-    try:
-        db_path = path_data.get("path")
-        if not db_path:
-            raise HTTPException(status_code=400, detail="路径不能为空")
-        
-        # 重新初始化数据库连接
-        db.__init__(db_path)
-        
-        # 保存配置
-        config = load_config()
-        config["db_path"] = db_path
-        save_config(config)
-        
-        return {"success": True, "message": "数据库设置成功"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"设置数据库失败: {str(e)}")
 
 @app.get("/api/open_db_directory")
 async def open_db_directory():
@@ -328,6 +319,23 @@ async def cleanup_old_dbs():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"清理文件失败: {str(e)}")
+
+@app.post("/api/set_top_sites_count")
+async def set_top_sites_count(config: ConfigModel):
+    """设置Top站点数量"""
+    try:
+        # 保存配置
+        current_config = load_config()
+        # 允许显式设置为 0 或 None
+        if config.top_sites_count is not None:
+            current_config["top_sites_count"] = config.top_sites_count
+        else:
+            current_config["top_sites_count"] = 6
+        save_config(current_config)
+
+        return {"success": True, "message": "Top站点数量设置成功"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"设置Top站点数量失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

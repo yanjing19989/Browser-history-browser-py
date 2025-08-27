@@ -5,7 +5,8 @@ from .database import db
 from .models import HistoryItem, HistoryFilters, StatsOverview
 
 class HistoryService:
-    
+    top_sites_count: int = 6
+
     @staticmethod
     def parse_time_range(time_range: str) -> Tuple[Optional[int], Optional[int]]:
         """解析时间范围参数"""
@@ -163,7 +164,7 @@ class HistoryService:
             {where_clause} 
             GROUP BY site_name 
             ORDER BY total_visits DESC 
-            LIMIT 6
+            LIMIT {HistoryService.top_sites_count}
         """
         top_sites_result = db.execute_query(top_sites_query, tuple(params))
         

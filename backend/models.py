@@ -28,4 +28,5 @@ class StatsOverview(BaseModel):
 
 class ConfigModel(BaseModel):
     db_path: Optional[str] = None
-    theme: Optional[str] = "auto"
+    top_sites_count: Optional[int] = 6
+    browser_db_path: Optional[str] = None
