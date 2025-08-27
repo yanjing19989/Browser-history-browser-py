@@ -100,8 +100,8 @@ async def set_db_path(config: ConfigModel):
     """设置数据库路径"""
     try:
         if config.db_path:
-            # 重新初始化数据库连接
-            db.__init__(config.db_path)
+            # 重新初始化数据库连接（先关闭旧连接再初始化）
+            db.reinit(config.db_path)
 
         # 保存配置
         current_config = load_config()
