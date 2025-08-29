@@ -29,10 +29,6 @@ jobs:
     - name: Build with PyInstaller
       run: |
         pyinstaller bhb.spec --clean --noconfirm
-    
-    - name: Copy static files
-      run: |
-        xcopy static dist\BrowserHistoryBrowser\static\ /E /I /Y
         
     - name: Create version info
       run: |
@@ -49,7 +45,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: BrowserHistoryBrowser-windows
-        path: dist/BrowserHistoryBrowser-windows.zip
+        path: dist/BrowserHistoryBrowser
         retention-days: 30
     
     - name: Upload release asset

@@ -17,6 +17,7 @@ a = Analysis(
     datas=[
         # Include backend module
         (str(spec_dir / 'backend'), 'backend'),
+        (str(spec_dir / 'static'), 'static'),
     ],
     hiddenimports=[
         'backend',
