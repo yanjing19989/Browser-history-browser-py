@@ -46,7 +46,7 @@ jobs:
         Compress-Archive -Path BrowserHistoryBrowser -DestinationPath BrowserHistoryBrowser-windows.zip
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: BrowserHistoryBrowser-windows
         path: dist/BrowserHistoryBrowser-windows.zip
