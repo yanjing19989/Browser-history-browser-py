@@ -11,24 +11,12 @@ The project includes automated CI/CD using GitHub Actions that builds Windows ex
 - ✅ 自动ZIP压缩 (目录版本)
 - ✅ 构件上传便于下载
 - ✅ 发布资源自动上传到GitHub Releases
-- ✅ 修复PyInstaller重载循环问题
-- ✅ 修复静态文件路径问题
 
 ## Manual Building (Windows)
 
 ### Prerequisites:
 - Python 3.8+ installed on Windows
 - Git (to clone the repository)
-
-### Quick Build:
-```bash
-# Clone the repository
-git clone https://github.com/yanjing19989/Browser-history-browser-py.git
-cd Browser-history-browser-py
-
-# Run the build script
-build.bat
-```
 
 ### Manual Build Steps:
 
@@ -93,13 +81,13 @@ pyinstaller bhb-onefile.spec --clean --noconfirm
 - **目录结构**: 使用PyInstaller目录模式，性能更好，便于调试
 - **静态文件**: HTML/CSS/JS文件内置在_internal/static/目录中
 - **依赖项**: 所有Python依赖打包在_internal目录中
-- **大小**: 典型构建大小约50-80MB (未压缩)
+- **大小**: 典型构建大小约60MB (未压缩)
 
 ### 单文件版本特点:
 - **单一文件**: 所有文件打包到一个可执行文件中
 - **便携性**: 无需解压，直接运行
 - **启动时间**: 首次启动稍慢 (需要解压临时文件)
-- **大小**: 约60-90MB单个文件
+- **大小**: 约20MB单个文件
 
 ### 技术实现:
 - **重载检测**: 使用`sys.frozen`检测打包环境，自动禁用开发模式重载

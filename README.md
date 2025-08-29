@@ -86,8 +86,6 @@ Browser History Browser (BHB) 是一个强大的浏览器历史记录分析工�
 如需自行构建或进行开发，请参考 [BUILD.md](BUILD.md) 获取详细的构建说明。
 
 ### 构建脚本：
-- **Windows 批处理**: `build.bat` (目录版本)
-- **PowerShell**: `build.ps1 -CreateZip` (目录版本)
 - **PyInstaller直接构建**:
   - 目录版本: `pyinstaller bhb.spec`
   - 单文件版本: `pyinstaller bhb-onefile.spec`
@@ -116,8 +114,6 @@ BHB_py/
 │   └── favicon.ico         # 网站图标
 ├── server.py               # 服务器启动脚本
 ├── start.bat               # Windows启动脚本
-├── build.bat               # 构建脚本 (批处理)
-├── build.ps1               # 构建脚本 (PowerShell)
 ├── bhb.spec                # PyInstaller 配置文件 (目录版本)
 ├── bhb-onefile.spec        # PyInstaller 配置文件 (单文件版本)
 ├── requirements.txt        # Python依赖列表
