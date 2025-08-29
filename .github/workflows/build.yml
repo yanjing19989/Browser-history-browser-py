@@ -1,0 +1,64 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r build_requirements.txt
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller bhb.spec --clean --noconfirm
+    
+    - name: Copy static files
+      run: |
+        xcopy static dist\BrowserHistoryBrowser\static\ /E /I /Y
+        
+    - name: Create version info
+      run: |
+        echo "Browser History Browser" > dist\BrowserHistoryBrowser\VERSION.txt
+        echo "Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" >> dist\BrowserHistoryBrowser\VERSION.txt
+        echo "Git Commit: ${{ github.sha }}" >> dist\BrowserHistoryBrowser\VERSION.txt
+      
+    - name: Create ZIP archive
+      run: |
+        cd dist
+        Compress-Archive -Path BrowserHistoryBrowser -DestinationPath BrowserHistoryBrowser-windows.zip
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: BrowserHistoryBrowser-windows
+        path: dist/BrowserHistoryBrowser-windows.zip
+        retention-days: 30
+    
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: dist/BrowserHistoryBrowser-windows.zip
+        asset_name: BrowserHistoryBrowser-windows.zip
+        asset_content_type: application/zip

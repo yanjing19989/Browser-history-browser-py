@@ -8,3 +8,21 @@ wheels/
 
 # Virtual environments
 .venv
+
+# PyInstaller build artifacts
+*.spec.bak
+*.spec.tmp
+
+# Build output
+*.zip
+VERSION.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store
+Thumbs.db
