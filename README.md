@@ -50,10 +50,53 @@ Browser History Browser (BHB) 是一个强大的浏览器历史记录分析工�
    - 前端界面: http://127.0.0.1:8000
    - API文档: http://127.0.0.1:8000/docs
 
+## 📦 预编译版本 (推荐)
+
+我们提供了基于 GitHub Actions 的自动化 CI/CD，可以直接下载预编译的 Windows 可执行文件：
+
+### 下载方式：
+1. **GitHub Releases**: 前往 [Releases 页面](../../releases) 下载最新版本
+2. **GitHub Actions**: 前往 [Actions 页面](../../actions) 下载最新构建的 artifacts
+
+### 两种打包版本：
+
+#### 🗂️ 目录版本 (推荐)
+- **文件**: `BrowserHistoryBrowser-windows-directory.zip`
+- **特点**: 解压后包含可执行文件和依赖文件夹
+- **优势**: 启动快速，便于调试和自定义
+- **使用**: 解压 → 运行 `BrowserHistoryBrowser.exe`
+
+#### 📄 单文件版本 
+- **文件**: `BrowserHistoryBrowser.exe`
+- **特点**: 单一可执行文件，所有依赖内置
+- **优势**: 极致便携，无需解压
+- **使用**: 直接运行即可
+
+### CI/CD 特性：
+- ✅ **自动构建**: 每次代码更新自动构建两个版本
+- ✅ **Windows 专用**: 仅支持 Windows 系统
+- ✅ **重载修复**: 解决打包版本无限重启问题
+- ✅ **静态资源**: Web界面完全内置，无外部依赖
+- ✅ **版本信息**: 包含构建时间和版本信息
+
+> 💡 **推荐使用预编译版本**，无需安装 Python 环境，开箱即用！
+
+## 🛠️ 手动构建 (开发者)
+
+如需自行构建或进行开发，请参考 [BUILD.md](BUILD.md) 获取详细的构建说明。
+
+### 构建脚本：
+- **PyInstaller直接构建**:
+  - 目录版本: `pyinstaller bhb.spec`
+  - 单文件版本: `pyinstaller bhb-onefile.spec`
+
 ## 📁 项目结构
 
 ```
 BHB_py/
+├── .github/                  # GitHub 配置
+│   └── workflows/           # CI/CD 工作流
+│       └── build.yml        # 自动构建配置
 ├── backend/                 # Python后端代码
 │   ├── __init__.py         # 包初始化文件
 │   ├── main.py             # FastAPI应用主文件
@@ -71,9 +114,13 @@ BHB_py/
 │   └── favicon.ico         # 网站图标
 ├── server.py               # 服务器启动脚本
 ├── start.bat               # Windows启动脚本
+├── bhb.spec                # PyInstaller 配置文件 (目录版本)
+├── bhb-onefile.spec        # PyInstaller 配置文件 (单文件版本)
 ├── requirements.txt        # Python依赖列表
+├── build_requirements.txt  # 构建依赖列表
 ├── package.json           # 项目配置信息
 ├── create_test_db.py      # 测试数据库创建脚本
+├── BUILD.md               # 构建说明文档
 └── README.md              # 项目说明文档
 ```
 
@@ -162,7 +209,11 @@ BHB_py/
 python server.py
 ```
 
-服务器将在文件更改时自动重载。
+**自动重载特性**:
+- 🔧 **开发环境**: 自动检测文件更改并重载服务器
+- 📦 **生产环境 (打包版本)**: 自动禁用重载，避免无限重启问题
+
+服务器启动时会显示当前运行模式。
 
 ## 📝 配置文件
 

@@ -1,0 +1,83 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r build_requirements.txt
+    
+    - name: Build directory version with PyInstaller
+      run: |
+        pyinstaller bhb.spec --clean --noconfirm
+        
+    - name: Build onefile version with PyInstaller
+      run: |
+        pyinstaller bhb-onefile.spec --clean --noconfirm
+        
+    - name: Create version info for directory version
+      run: |
+        echo "Browser History Browser" > dist\BrowserHistoryBrowser\VERSION.txt
+        echo "Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" >> dist\BrowserHistoryBrowser\VERSION.txt
+        echo "Git Commit: ${{ github.sha }}" >> dist\BrowserHistoryBrowser\VERSION.txt
+        echo "Package Type: Directory" >> dist\BrowserHistoryBrowser\VERSION.txt
+      
+    - name: Create ZIP archive for directory version
+      run: |
+        cd dist
+        Compress-Archive -Path BrowserHistoryBrowser -DestinationPath BrowserHistoryBrowser-windows-directory.zip
+    
+    - name: Upload directory version artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: BrowserHistoryBrowser-windows-directory
+        path: dist/BrowserHistoryBrowser
+        retention-days: 30
+    
+    - name: Upload onefile version artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: BrowserHistoryBrowser-windows-onefile
+        path: dist/BrowserHistoryBrowser.exe
+        retention-days: 30
+    
+    - name: Upload directory version release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: dist/BrowserHistoryBrowser-windows-directory.zip
+        asset_name: BrowserHistoryBrowser-windows-directory.zip
+        asset_content_type: application/zip
+    
+    - name: Upload onefile version release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: dist/BrowserHistoryBrowser.exe
+        asset_name: BrowserHistoryBrowser.exe
+        asset_content_type: application/octet-stream
