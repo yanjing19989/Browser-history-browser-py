@@ -266,7 +266,7 @@ async def browse_browser_db_file():
     except Exception as e:
         return {"success": False, "path": "", "message": f"文件选择失败: {str(e)}"}
 
-@app.post("/api/cleanup_old_dbs")
+@app.get("/api/cleanup_old_dbs")
 async def cleanup_old_dbs():
     """清理与当前使用数据库不相关的所有数据库文件"""
     try:

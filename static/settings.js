@@ -24,6 +24,42 @@ const elements = {
 
 let currentConfig = null;
 
+// 通用的API调用函数
+async function apiCall(options) {
+    const { endpoint, data = null, method = data ? 'POST' : 'GET',
+    button = null, shouldUpdateConfig = false,
+    onSuccess = null, onError = null
+  } = options;
+
+  try {
+    if (button) button.disabled = true;
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: data ? JSON.stringify(data) : null
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const result = await response.json();
+    if (onSuccess) onSuccess(result);
+
+    if (shouldUpdateConfig) {
+      const configResponse = await fetch(`${API_BASE}/get_config`);
+      if (configResponse.ok) {
+        currentConfig = await configResponse.json();
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error(`${endpoint}执行出错:`, error);
+    if (onError) onError(error);
+    throw error;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 function showToast(message, type = 'info') {
   // 移除已存在的提示
   const existingToast = document.querySelector('.toast');
@@ -130,36 +166,23 @@ async function validatePath() {
   const path = elements.dbPath.value.trim();
   if (!path) return;
 
-  try {
-    elements.validateBtn.disabled = true;
-
-    const response = await fetch(`${API_BASE}/validate_db_path`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ db_path: path })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  await apiCall({endpoint: '/validate_db_path', data: { db_path: path },
+    button: elements.validateBtn,
+    onSuccess: (result) => {
+      if (result.valid) {
+        updateStatus('ok', result.message || '数据库路径有效');
+        showToast('数据库路径验证成功', 'success');
+      } else {
+        updateStatus('error', result.message || '数据库路径无效');
+        showToast(result.message || '数据库路径无效', 'error');
+      }
+    },
+    onError: (error) => {
+      updateStatus('error', '验证失败: ' + error);
+      showToast('验证失败: ' + error, 'error');
     }
-
-    const result = await response.json();
-
-    if (result.valid) {
-      updateStatus('ok', result.message || '数据库路径有效');
-      showToast('数据库路径验证成功', 'success');
-    } else {
-      updateStatus('error', result.message || '数据库路径无效');
-      showToast(result.message || '数据库路径无效', 'error');
-    }
-  } catch (error) {
-    console.error('验证失败:', error);
-    updateStatus('error', '验证失败: ' + error);
-    showToast('验证失败: ' + error, 'error');
-  } finally {
-    elements.validateBtn.disabled = false;
-    updateButtons();
-  }
+  });
+  updateButtons();
 }
 
 // 应用设置
@@ -167,38 +190,18 @@ async function applySettings() {
   const path = elements.dbPath.value.trim();
   if (!path) return;
 
-  try {
-    elements.applyBtn.disabled = true;
-
-    const response = await fetch(`${API_BASE}/set_db_path`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ db_path: path })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  await apiCall({endpoint: '/set_db_path', data: { db_path: path },
+    button: elements.applyBtn, shouldUpdateConfig: true,
+    onSuccess: (result) => {
+      updateStatus('ok', '数据库配置成功');
+      showToast(result.message || '设置成功', 'success');
+    },
+    onError: (error) => {
+      updateStatus('error', '设置失败: ' + error);
+      showToast('设置失败: ' + error, 'error');
     }
-
-    const result = await response.json();
-
-    updateStatus('ok', '数据库配置成功');
-    showToast(result.message || '设置成功', 'success');
-
-    // 更新当前配置
-    const configResponse = await fetch(`${API_BASE}/get_config`);
-    if (configResponse.ok) {
-      currentConfig = await configResponse.json();
-    }
-
-  } catch (error) {
-    console.error('应用设置失败:', error);
-    updateStatus('error', '设置失败: ' + error);
-    showToast('设置失败: ' + error, 'error');
-  } finally {
-    elements.applyBtn.disabled = false;
-    updateButtons();
-  }
+  });
+  updateButtons();
 }
 
 // 返回主页
@@ -323,137 +326,69 @@ async function syncBrowserDb() {
   const browserPath = elements.browserDbPath.value.trim();
   if (!browserPath) return;
 
-  try {
-    elements.syncBtn.disabled = true;
-    updateSyncStatus('warning', '正在同步数据库...');
+  updateSyncStatus('warning', '正在同步数据库...');
 
-    // 复制浏览器数据库到程序目录
-    const response = await fetch(`${API_BASE}/copy_browser_db_to_app`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ browser_db_path: browserPath })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  await apiCall({
+    endpoint: '/copy_browser_db_to_app', data: { browser_db_path: browserPath },
+    button: elements.syncBtn,
+    onSuccess: async (result) => {
+      const appDbPath = result.path;
+      // 自动设置为当前数据库路径
+      elements.dbPath.value = appDbPath;
+      await applySettings();
+      updateSyncStatus('ok', '同步成功');
+      showToast('浏览器数据库同步成功!', 'success');
+    },
+    onError: (error) => {
+      updateSyncStatus('error', '同步失败: ' + error);
+      showToast('浏览器数据库同步失败: ' + error, 'error');
     }
-
-    const result = await response.json();
-    const appDbPath = result.path;
-
-    // 自动设置为当前数据库路径
-    elements.dbPath.value = appDbPath;
-    await applySettings();
-
-    updateSyncStatus('ok', '同步成功');
-    showToast('浏览器数据库同步成功!', 'success');
-
-    updateSyncButtons();
-
-  } catch (error) {
-    console.error('同步失败:', error);
-    updateSyncStatus('error', '同步失败: ' + error);
-    showToast('同步失败: ' + error, 'error');
-  } finally {
-    elements.syncBtn.disabled = false;
-    updateSyncButtons();
-  }
+  });
+  updateSyncButtons();
 }
 
 // 打开数据库所在目录
 async function openDbDirectory() {
-  try {
-    elements.openDirBtn.disabled = true;
-    
-    const response = await fetch(`${API_BASE}/open_db_directory`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      showToast('数据库目录已在文件管理器中打开', 'success');
-    } else {
-      showToast(result.message || '打开目录失败', 'error');
-      // 如果打开失败，提供路径信息
-      try {
-        await navigator.clipboard.writeText(result.path);
-        showToast(`目录路径已复制: ${result.path}`, 'info');
-      } catch (clipboardError) {
-        showToast(`目录路径: ${result.path}`, 'info');
+  await apiCall({endpoint: '/open_db_directory',
+    button: elements.cleanupBtn,
+    onSuccess: (result) => {
+      if (result.success) {
+        showToast('数据库目录已在文件管理器中打开', 'success');
+      } else {
+        showToast(result.message || '打开目录失败', 'error');
+        navigator.clipboard.writeText(result.path)
+          .then(() => showToast(`目录路径已复制: ${result.path}`, 'info'))
+          .catch(() => showToast(`目录路径: ${result.path}`, 'info'));
       }
-    }
-    
-  } catch (error) {
-    console.error('打开目录失败:', error);
-    showToast('打开目录失败: ' + error, 'error');
-  } finally {
-    elements.openDirBtn.disabled = false;
-    updateButtons();
-  }
+    },
+    onError: (error) => showToast('打开目录失败: ' + error, 'error')
+  });
+  updateButtons();
 }
 
 // 自动清理旧数据库文件
 async function cleanupOldDbs() {
   const confirmed = confirm('确定要清理除当前使用外的所有.db文件吗？此操作不可撤销！');
+  if (!confirmed) return;
 
-  if (!confirmed) {
-    return;
-  }
+  await apiCall({endpoint: '/cleanup_old_dbs',
+    button: elements.cleanupBtn,
+    onSuccess: (result) => showToast(result.message || '清理完成', 'success'),
+    onError: (error) => showToast('清理失败: ' + error, 'error')
+  });
 
-  try {
-    elements.cleanupBtn.disabled = true;
-    
-    const response = await fetch(`${API_BASE}/cleanup_old_dbs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    showToast(result.message || '清理完成', 'success');
-    
-  } catch (error) {
-    console.error('清理失败:', error);
-    showToast('清理失败: ' + error, 'error');
-  } finally {
-    elements.cleanupBtn.disabled = false;
-    updateButtons();
-  }
+  updateButtons();
 }
 
 // 应用TOP站点数量设置
 async function applyTopSitesCount() {
   const count = parseInt(elements.topSitesCount.value);
-  try {
-    elements.applyTopSitesBtn.disabled = true;
+  await apiCall({endpoint: '/set_top_sites_count', data: { top_sites_count: count },
+    button: elements.applyTopSitesBtn, shouldUpdateConfig: true,
+    onSuccess: (result) => showToast(result.message || '设置成功', 'success'),
+    onError: (error) => showToast('TOP站点数量设置失败: ' + error, 'error')
+  });
 
-    const response = await fetch(`${API_BASE}/set_top_sites_count`, {
-      method: 'POST',
-      headers: { 'Content-Type' : 'application/json' },
-      body: JSON.stringify({ top_sites_count: count })
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    showToast(result.message || '设置成功', 'success');
-    // 更新当前配置
-    const configResponse = await fetch(`${API_BASE}/get_config`);
-    if (configResponse.ok) {
-      currentConfig = await configResponse.json();
-    }
-  } catch (error) {
-    console.error('设置TOP站点数量失败:', error);
-    showToast('设置失败: ' + error, 'error');
-  } finally {
-    elements.applyTopSitesBtn.disabled = false;
-  }
   updateTopSitesButtons();
 }
 
